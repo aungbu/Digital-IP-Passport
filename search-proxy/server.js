@@ -106,20 +106,25 @@ export function normalizeRecord(item) {
     fetchedAt: new Date().toISOString(), source: "USPTO ODP live"
   };
 }
-async function odpSearch(q, offset, limit) {
-  const url = `${ODP_BASE}/api/v1/patent/applications/search`;
-  let attempt = 0;
-  while (true) {
-    const res = await fetch(url, { method: "POST", headers: { "X-API-KEY": API_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ q, pagination: { offset, limit } }) });
-    if (res.status === 429 && attempt < 3) { await new Promise((r) => setTimeout(r, 500 * (2 ** attempt))); attempt++; continue; }
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      const err = new Error(res.status === 429 ? "USPTO rate limit — retrying" : `USPTO error ${res.status}`);
-      err.status = res.status === 429 ? 429 : 502; err.detail = text.slice(0, 200);
-      throw err;
-    }
-    return res.json();
+const ODP_FIELDS = ["applicationNumberText", "applicationMetaData"]; // metadata only: 100 rows ~290 KB instead of ~7 MB (413)
+
+async function odpSearch(q, offset = 0, limit = 25, _retry = 0) {
+  limit = Math.min(100, Math.max(1, Number(limit) || 25)); // ODP hard max is 100
+  const body = JSON.stringify({ q, pagination: { offset, limit }, fields: ODP_FIELDS });
+  const res = await fetch("https://api.uspto.gov/api/v1/patent/applications/search", {
+    method: "POST",
+    headers: { "X-API-KEY": API_KEY, "Content-Type": "application/json" },
+    body,
+    signal: AbortSignal.timeout(20000),
+  });
+  if (res.status === 413 && limit > 10 && _retry < 3) return odpSearch(q, offset, Math.floor(limit / 2), _retry + 1);
+  if (res.status === 429) { const e = new Error("USPTO rate limit"); e.status = 429; throw e; }
+  if (!res.ok) {
+    const text = (await res.text()).slice(0, 300);
+    console.error("ODP", res.status, "q=", q, "offset=", offset, "limit=", limit, text);
+    const e = new Error(`USPTO error ${res.status}`); e.status = res.status; throw e;
   }
+  return res.json();
 }
 function odpItems(data) {
   // ODP search returns results under a few possible keys; accept them all.
@@ -137,7 +142,7 @@ function sendCsv(res, rows) {
   const head = "patentNumber,applicationNumber,title,assignee,filingDate,grantDate,status,rights,type,patentCenter,googlePatents";
   const lines = rows.map((p) => [p.patentNumber, p.applicationNumber, p.title, p.assignee, p.filingDate, p.grantDate, p.status, p.rights, p.type, p.sourceUrls.patentCenter, p.sourceUrls.googlePatents].map(esc).join(","));
   res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=uspto-owner.csv" });
-  res.end([head, ...lines].join("\n"));
+  res.end("\uFEFF" + [head, ...lines].join("\r\n"));
 }
 
 const server = http.createServer(async (req, res) => {
@@ -184,8 +189,8 @@ const server = http.createServer(async (req, res) => {
           total = odpTotal(data);
           const batch = odpItems(data).map(normalizeRecord);
           items.push(...batch);
-          if (batch.length < 100) break;
-          offset += 100;
+          if (items.length >= total || batch.length === 0) break;
+          offset += batch.length;
         }
         const byYear = {};
         for (const p of items) { const y = (p.grantDate || p.filingDate || "").slice(0, 4); if (y) byYear[y] = (byYear[y] || 0) + 1; }
