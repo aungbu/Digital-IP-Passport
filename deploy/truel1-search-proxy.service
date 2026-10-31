@@ -1,0 +1,19 @@
+[Unit]
+Description=USPTO live search proxy for passport.truel1.com/search
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/truel1-search-proxy
+Environment=PORT=4010
+Environment=USPTO_ENV=/etc/truel1/uspto.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

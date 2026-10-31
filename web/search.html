@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>US Patent Search — Live from USPTO | passport.truel1.com</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/search.css"></head>
+<body><header><h1>US Patent Search — Live</h1><p>Search real USPTO records, live, through our server-side proxy. No API key is in this page.</p>
+<nav><a href="/">All 10 passports</a> · <a href="/search">Search USPTO</a></nav>
+<p class="warn">⚠️ Results are shown as last fetched from USPTO. In-force status and ownership can only be confirmed in the official register. No legal advice. A TRUE L1 listing is not a USPTO recording.</p></header>
+<main>
+<section class="search-box">
+<p><span class="badge ok">USPTO live</span> <span id="health">Checking proxy…</span></p>
+<form id="form">
+<label>Search mode
+<select id="mode"><option value="keyword">By meaning / keywords</option><option value="number">By number</option><option value="owner">By owner</option></select></label>
+<label>Query <input id="q" type="text" placeholder="e.g. heated jacket, US12050123, or Toyota" required></label>
+<label>Owner (for owner mode, leave query empty for a full portfolio) <input id="owner" type="text" placeholder="e.g. Toyota"></label>
+<div class="row">
+<label>Year from <input id="fromYear" type="number" min="1800" max="2100" placeholder="2020"></label>
+<label>Year to <input id="toYear" type="number" min="1800" max="2100" placeholder="2024"></label>
+<label>Type <select id="type"><option value="">Any</option><option value="grant">Grant</option><option value="application">Application</option></select></label>
+<label>CPC class <input id="cpc" type="text" placeholder="e.g. H04W"></label>
+</div>
+<button type="submit">Search USPTO live</button>
+<button type="button" id="csv" class="secondary">Download CSV (owner mode, up to 500)</button>
+</form>
+<p id="status"></p>
+</section>
+<section id="totals" class="detail" hidden></section>
+<section id="results"></section>
+</main>
+<footer><p>Source: USPTO Open Data Portal, via the passport.truel1.com proxy. Full text: Patent Center / Google Patents links on each card. Abstract and claim 1 are shown when USPTO returns them, otherwise the card links to the full text.</p></footer>
+<script src="/search.js"></script></body></html>
