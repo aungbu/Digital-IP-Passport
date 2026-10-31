@@ -84,8 +84,8 @@ export function mapRights(status) {
 }
 export function normalizeRecord(item) {
   const md = item.applicationMetaData || item || {};
-  const patentNumber = String(md.patentNumber || "").replace(/[^0-9]/g, "");
-  const appNo = md.applicationNumberText || md.applicationNumber || "";
+  const patentNumber = String(md.patentNumber || item.patentNumber || "").replace(/[^0-9]/g, "");
+  const appNo = item.applicationNumberText || md.applicationNumberText || md.applicationNumber || "";
   const appDigits = String(appNo).replace(/[^0-9]/g, "");
   const title = md.inventionTitle || md.title || "";
   const assignee = md.firstApplicantName || md.assignee || "";
@@ -110,7 +110,7 @@ async function odpSearch(q, offset, limit) {
   const url = `${ODP_BASE}/api/v1/patent/applications/search`;
   let attempt = 0;
   while (true) {
-    const res = await fetch(url, { method: "POST", headers: { "X-API-KEY": API_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ q, offset, limit }) });
+    const res = await fetch(url, { method: "POST", headers: { "X-API-KEY": API_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ q, pagination: { offset, limit } }) });
     if (res.status === 429 && attempt < 3) { await new Promise((r) => setTimeout(r, 500 * (2 ** attempt))); attempt++; continue; }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -123,7 +123,7 @@ async function odpSearch(q, offset, limit) {
 }
 function odpItems(data) {
   // ODP search returns results under a few possible keys; accept them all.
-  return data.results || data.items || data.data || [];
+  return data.patentFileWrapperDataBag || data.results || data.items || data.data || [];
 }
 function odpTotal(data) { return data.total || data.count || odpItems(data).length; }
 
