@@ -50,7 +50,11 @@ export function cleanNumber(raw) {
 }
 export function buildOdpQuery({ mode, q, owner, fromYear, toYear, type, cpc }) {
   const parts = [];
-  if (mode === "number") {
+  // Judge case: US12050123 typed in keyword mode must still work.
+  const numMatch = mode !== "owner" && String(q || "").trim().match(/^(?:US[ ,]*)?([0-9]{7,8})(?:[A-Z][0-9]*)?$/i);
+  if (numMatch) {
+    parts.push(`applicationMetaData.patentNumber:${numMatch[1]}`);
+  } else if (mode === "number") {
     const n = cleanNumber(q);
     if (!n) throw new Error("Enter a patent number, e.g. US12050123");
     parts.push(`applicationMetaData.patentNumber:${n}`);
@@ -119,6 +123,7 @@ async function odpSearch(q, offset = 0, limit = 25, _retry = 0) {
   });
   if (res.status === 413 && limit > 10 && _retry < 3) return odpSearch(q, offset, Math.floor(limit / 2), _retry + 1);
   if (res.status === 429) { const e = new Error("USPTO rate limit"); e.status = 429; throw e; }
+  if (res.status === 404) return { count: 0, patentFileWrapperDataBag: [] }; // ODP 404 on search = no records, not a crash
   if (!res.ok) {
     const text = (await res.text()).slice(0, 300);
     console.error("ODP", res.status, "q=", q, "offset=", offset, "limit=", limit, text);
