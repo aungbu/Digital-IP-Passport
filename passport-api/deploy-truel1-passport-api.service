@@ -1,0 +1,16 @@
+[Unit]
+Description=TRUE IP Passport API (real added passports)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/truel1-passports
+Environment=PASSPORT_API_PORT=4011
+Environment=PASSPORT_DATA_FILE=/opt/truel1-passports/data.json
+ExecStart=/usr/bin/node /opt/truel1-passports/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

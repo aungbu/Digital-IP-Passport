@@ -1,0 +1,1 @@
+{"description":"Server-side Passport API for TRUE IP — real added passports, edit-token auth, no dependencies","main":"server.js","name":"truel1-passport-api","private":true,"scripts":{"start":"node server.js"},"version":"1.0.0"}
